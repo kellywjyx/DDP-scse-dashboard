@@ -1,0 +1,9 @@
+raceplotly==0.1.7
+streamlit==1.27.2
+streamlit-aggrid==0.3.4.post3
+streamlit-pills==0.3.0
+plotly==5.9.0
+pyvis==0.3.2
+matplotlib==3.5.2
+wordcloud==1.9.2
+networkx==3.1
