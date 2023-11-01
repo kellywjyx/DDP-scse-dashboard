@@ -1,0 +1,714 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: white;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="A S Madhukumar">A S Madhukumar</option>
+                                
+                                    <option value="Alexei Sourin">Alexei Sourin</option>
+                                
+                                    <option value="Anupam Chattopadhyay">Anupam Chattopadhyay</option>
+                                
+                                    <option value="Anwitaman Datta">Anwitaman Datta</option>
+                                
+                                    <option value="Arvind Easwaran">Arvind Easwaran</option>
+                                
+                                    <option value="Bo An">Bo An</option>
+                                
+                                    <option value="Cham Tat Jen">Cham Tat Jen</option>
+                                
+                                    <option value="Chee Wei Tan">Chee Wei Tan</option>
+                                
+                                    <option value="Chen Change Loy">Chen Change Loy</option>
+                                
+                                    <option value="Chia Liang Tien">Chia Liang Tien</option>
+                                
+                                    <option value="Chng Eng Siong">Chng Eng Siong</option>
+                                
+                                    <option value="Cong Gao">Cong Gao</option>
+                                
+                                    <option value="Deepu Rajan">Deepu Rajan</option>
+                                
+                                    <option value="Dmitrii Ustiugov">Dmitrii Ustiugov</option>
+                                
+                                    <option value="Douglas Leslie Maskell">Douglas Leslie Maskell</option>
+                                
+                                    <option value="Dusit Niyato">Dusit Niyato</option>
+                                
+                                    <option value="Erik Cambria">Erik Cambria</option>
+                                
+                                    <option value="Goh Wooi Boon">Goh Wooi Boon</option>
+                                
+                                    <option value="Guan Cuntai">Guan Cuntai</option>
+                                
+                                    <option value="He Ying">He Ying</option>
+                                
+                                    <option value="Huang Shell Ying">Huang Shell Ying</option>
+                                
+                                    <option value="Hui Siu Cheung">Hui Siu Cheung</option>
+                                
+                                    <option value="Jagath Chandana Rajapakse">Jagath Chandana Rajapakse</option>
+                                
+                                    <option value="Joty Shafiq Rayhan">Joty Shafiq Rayhan</option>
+                                
+                                    <option value="Ke Yiping, Kelly">Ke Yiping, Kelly</option>
+                                
+                                    <option value="Kwoh Chee Keong">Kwoh Chee Keong</option>
+                                
+                                    <option value="Lam Kwok Yan">Lam Kwok Yan</option>
+                                
+                                    <option value="Lam Siew Kei">Lam Siew Kei</option>
+                                
+                                    <option value="Lee Bu Sung">Lee Bu Sung</option>
+                                
+                                    <option value="Li Boyang">Li Boyang</option>
+                                
+                                    <option value="Li Mo">Li Mo</option>
+                                
+                                    <option value="Li Yi">Li Yi</option>
+                                
+                                    <option value="Lim Wei Yang Bryan">Lim Wei Yang Bryan</option>
+                                
+                                    <option value="Lin Guosheng">Lin Guosheng</option>
+                                
+                                    <option value="Lin Shang-Wei">Lin Shang-Wei</option>
+                                
+                                    <option value="Lin Weisi">Lin Weisi</option>
+                                
+                                    <option value="Liu Weichen">Liu Weichen</option>
+                                
+                                    <option value="Liu Yang">Liu Yang</option>
+                                
+                                    <option value="Liu Ziwei">Liu Ziwei</option>
+                                
+                                    <option value="Loke Yuan Ren">Loke Yuan Ren</option>
+                                
+                                    <option value="Long Cheng">Long Cheng</option>
+                                
+                                    <option value="Lu Shijian">Lu Shijian</option>
+                                
+                                    <option value="Luke Ong （翁之昊）">Luke Ong （翁之昊）</option>
+                                
+                                    <option value="Luo Jun">Luo Jun</option>
+                                
+                                    <option value="Luo Siqiang">Luo Siqiang</option>
+                                
+                                    <option value="Luu Anh Tuan">Luu Anh Tuan</option>
+                                
+                                    <option value="Miao Chun Yan">Miao Chun Yan</option>
+                                
+                                    <option value="Mohamed M. Sabry">Mohamed M. Sabry</option>
+                                
+                                    <option value="Oh Hong Lye">Oh Hong Lye</option>
+                                
+                                    <option value="Ong Chin Ann">Ong Chin Ann</option>
+                                
+                                    <option value="Ong Yew Soon">Ong Yew Soon</option>
+                                
+                                    <option value="Owen Noel Newton Fernando">Owen Noel Newton Fernando</option>
+                                
+                                    <option value="Pan Xingang">Pan Xingang</option>
+                                
+                                    <option value="Pan, Sinno Jialin">Pan, Sinno Jialin</option>
+                                
+                                    <option value="Qian Kemao">Qian Kemao</option>
+                                
+                                    <option value="Quek Hiok Chai">Quek Hiok Chai</option>
+                                
+                                    <option value="Seah Hock Soon">Seah Hock Soon</option>
+                                
+                                    <option value="Shen Zhiqi">Shen Zhiqi</option>
+                                
+                                    <option value="Siyuan Liu">Siyuan Liu</option>
+                                
+                                    <option value="Smitha K G">Smitha K G</option>
+                                
+                                    <option value="Sourav Saha Bhowmick">Sourav Saha Bhowmick</option>
+                                
+                                    <option value="Sun Aixin">Sun Aixin</option>
+                                
+                                    <option value="Tan Rui">Tan Rui</option>
+                                
+                                    <option value="Vidya Sudarshan">Vidya Sudarshan</option>
+                                
+                                    <option value="Wai Kin Adams Kong">Wai Kin Adams Kong</option>
+                                
+                                    <option value="Wang Wenya">Wang Wenya</option>
+                                
+                                    <option value="Wee Keong NG">Wee Keong NG</option>
+                                
+                                    <option value="Wei Ying">Wei Ying</option>
+                                
+                                    <option value="Wen Yonggang">Wen Yonggang</option>
+                                
+                                    <option value="Wentong Cai">Wentong Cai</option>
+                                
+                                    <option value="Yeo Chai Kiat">Yeo Chai Kiat</option>
+                                
+                                    <option value="Yu Han">Yu Han</option>
+                                
+                                    <option value="Zhang Hanwang">Zhang Hanwang</option>
+                                
+                                    <option value="Zhang Jie">Zhang Jie</option>
+                                
+                                    <option value="Zhang Tianwei">Zhang Tianwei</option>
+                                
+                                    <option value="Zhao Jun">Zhao Jun</option>
+                                
+                                    <option value="Zheng Jianmin">Zheng Jianmin</option>
+                                
+                                    <option value="Zinovi Rabinovich">Zinovi Rabinovich</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "A S Madhukumar", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00083/57/?filename=Assoc Prof A S Madhukumar (2)_1.jpg", "label": "A S Madhukumar", "shape": "circularImage", "title": "Name: A S Madhukumar\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 318\nCitations: 2923\nFrequent collaborators: Dusit Niyato"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Alexei Sourin", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00274/57/?filename=Assoc Prof Alexei Sourin.JPG", "label": "Alexei Sourin", "shape": "circularImage", "title": "Name: Alexei Sourin\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 237\nCitations: 2949\nFrequent collaborators: Chia Liang Tien, Chng Eng Siong, Cong Gao, Lee Bu Sung, Liu Yang,\nMiao Chun Yan, Ong Yew Soon, Qian Kemao, Seah Hock Soon, Vidya Sudarshan, Wee Keong NG, Wentong Cai, Yu Han"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Anupam Chattopadhyay", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01076/57/?filename=anupam_1_2.JPG", "label": "Anupam Chattopadhyay", "shape": "circularImage", "title": "Name: Anupam Chattopadhyay\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 381\nCitations: 6365\nFrequent collaborators: Arvind Easwaran, Lam Kwok Yan, Mohamed M. Sabry, Owen Noel Newton Fernando"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Anwitaman Datta", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00706/57/?filename=anwitaman-pic.jpg", "label": "Anwitaman Datta", "shape": "circularImage", "title": "Name: Anwitaman Datta\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 232\nCitations: 8078\nFrequent collaborators: Lee Bu Sung, Sun Aixin, Wee Keong NG, Zhang Jie"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Arvind Easwaran", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00687/57/?filename=Assoc Prof Arvind Easwaran.JPG", "label": "Arvind Easwaran", "shape": "circularImage", "title": "Name: Arvind Easwaran\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 172\nCitations: 2848\nFrequent collaborators: Anupam Chattopadhyay, Tan Rui"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Bo An", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00698/57/?filename=Assoc Prof Bo An.JPG", "label": "Bo An", "shape": "circularImage", "title": "Name: Bo An\nPosition: Professor, School of Computer Science and Engineering\nPublications: 286\nCitations: 7111\nFrequent collaborators: Miao Chun Yan, Shen Zhiqi, Zinovi Rabinovich"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Cham Tat Jen", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01067/57/?filename=astjcham_1_2.JPG", "label": "Cham Tat Jen", "shape": "circularImage", "title": "Name: Cham Tat Jen\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 133\nCitations: 5608\nFrequent collaborators: Chia Liang Tien, Deepu Rajan, Zheng Jianmin"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Chee Wei Tan", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp02029/57/?filename=cheewtan_STF.jpg", "label": "Chee Wei Tan", "shape": "circularImage", "title": "Name: Chee Wei Tan\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 154\nCitations: 5544\nFrequent collaborators: nan"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Chen Change Loy", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00574/57/?filename=ccloy_1_2.JPG", "label": "Chen Change Loy", "shape": "circularImage", "title": "Name: Chen Change Loy\nPosition: Professor, School of Computer Science and Engineering\nPublications: 280\nCitations: 64565\nFrequent collaborators: Liu Ziwei, Ong Yew Soon, Pan Xingang"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Chia Liang Tien", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00991/57/?filename=asltchia_1_2.JPG", "label": "Chia Liang Tien", "shape": "circularImage", "title": "Name: Chia Liang Tien\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 164\nCitations: 5561\nFrequent collaborators: Deepu Rajan, Lee Bu Sung, Sourav Saha Bhowmick"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Chng Eng Siong", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00098/57/?filename=Assoc Prof Chng Eng Siong.jpg", "label": "Chng Eng Siong", "shape": "circularImage", "title": "Name: Chng Eng Siong\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 344\nCitations: 8102\nFrequent collaborators: Deepu Rajan, Joty Shafiq Rayhan, Miao Chun Yan"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Cong Gao", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00744/57/?filename=Prof Cong Gao.JPG", "label": "Cong Gao", "shape": "circularImage", "title": "Name: Cong Gao\nPosition: Co-Director, Singtel Cognitive and Artificial Intelligence Lab for Enterprises@NTU\nPublications: 235\nCitations: 17737\nFrequent collaborators: Long Cheng, Miao Chun Yan, Sun Aixin"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Deepu Rajan", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01157/57/?filename=asdrajan_1_2.JPG", "label": "Deepu Rajan", "shape": "circularImage", "title": "Name: Deepu Rajan\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 166\nCitations: 4752\nFrequent collaborators: Chia Liang Tien, Chng Eng Siong, Quek Hiok Chai"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Dmitrii Ustiugov", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp02117/57/?filename=card_photo.jpg", "label": "Dmitrii Ustiugov", "shape": "circularImage", "title": "Name: Dmitrii Ustiugov\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 16\nCitations: 440\nFrequent collaborators: nan"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Douglas Leslie Maskell", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01059/57/?filename=asdouglas_1_2.JPG", "label": "Douglas Leslie Maskell", "shape": "circularImage", "title": "Name: Douglas Leslie Maskell\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 216\nCitations: 5384\nFrequent collaborators: Goh Wooi Boon, Quek Hiok Chai"}, {"borderWidth": 3, "color": "#E74C3C", "font": {"color": "black"}, "id": "Dusit Niyato", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01008/57/?filename=Prof Dusit Niyato_3_1_2.jpg", "label": "Dusit Niyato", "shape": "circularImage", "title": "Name: Dusit Niyato\nPosition: Professor, School of Computer Science and Engineering\nPublications: 1284\nCitations: 67327\nFrequent collaborators: Lim Wei Yang Bryan, Miao Chun Yan, Zhao Jun"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Erik Cambria", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00927/57/?filename=erik ntu.jpeg", "label": "Erik Cambria", "shape": "circularImage", "title": "Name: Erik Cambria\nPosition: Professor, School of Computer Science and Engineering\nPublications: 458\nCitations: 46994\nFrequent collaborators: Jagath Chandana Rajapakse, Miao Chun Yan, Ong Yew Soon"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Goh Wooi Boon", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00693/57/?filename=aswbgoh_1_2.JPG", "label": "Goh Wooi Boon", "shape": "circularImage", "title": "Name: Goh Wooi Boon\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 84\nCitations: 1457\nFrequent collaborators: Chng Eng Siong, Douglas Leslie Maskell, Guan Cuntai, Hui Siu Cheung, Seah Hock Soon"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Guan Cuntai", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01023/57/?filename=ctguan.jpg", "label": "Guan Cuntai", "shape": "circularImage", "title": "Name: Guan Cuntai\nPosition: Professor, School of Computer Science and Engineering\nPublications: 456\nCitations: 24164\nFrequent collaborators: Kwoh Chee Keong, Lu Shijian, Quek Hiok Chai"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "He Ying", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00503/57/?filename=Assoc Prof He Ying.png", "label": "He Ying", "shape": "circularImage", "title": "Name: He Ying\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 197\nCitations: 5310\nFrequent collaborators: Luo Jun, Miao Chun Yan, Seah Hock Soon"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Huang Shell Ying", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00643/57/?filename=assyhuang_1_2.JPG", "label": "Huang Shell Ying", "shape": "circularImage", "title": "Name: Huang Shell Ying\nPosition: Senior Lecturer, School of Computer Science and Engineering\nPublications: 90\nCitations: 1799\nFrequent collaborators: Miao Chun Yan, Quek Hiok Chai, Wentong Cai"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Hui Siu Cheung", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00700/57/?filename=asschui_1_2.JPG", "label": "Hui Siu Cheung", "shape": "circularImage", "title": "Name: Hui Siu Cheung\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 274\nCitations: 7857\nFrequent collaborators: Lee Bu Sung, Luu Anh Tuan, Yeo Chai Kiat"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Jagath Chandana Rajapakse", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00169/57/?filename=Prof Jagath Chandana Rajapakse.JPG", "label": "Jagath Chandana Rajapakse", "shape": "circularImage", "title": "Name: Jagath Chandana Rajapakse\nPosition: Professor, School of Computer Science and Engineering\nPublications: 321\nCitations: 14596\nFrequent collaborators: Erik Cambria, Hui Siu Cheung, Owen Noel Newton Fernando"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Joty Shafiq Rayhan", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00319/57/?filename=Assoc Prof Joty Shafiq Rayhan.JPG", "label": "Joty Shafiq Rayhan", "shape": "circularImage", "title": "Name: Joty Shafiq Rayhan\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 228\nCitations: 8717\nFrequent collaborators: Chng Eng Siong, Miao Chun Yan, Sourav Saha Bhowmick"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Ke Yiping, Kelly", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00908/57/?filename=Yiping Ke_1.jpg", "label": "Ke Yiping, Kelly", "shape": "circularImage", "title": "Name: Ke Yiping, Kelly\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 80\nCitations: 3750\nFrequent collaborators: Ong Yew Soon, Pan, Sinno Jialin"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Kwoh Chee Keong", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00799/57/?filename=asckkwoh_1_2.JPG", "label": "Kwoh Chee Keong", "shape": "circularImage", "title": "Name: Kwoh Chee Keong\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 378\nCitations: 8862\nFrequent collaborators: Guan Cuntai, Lin Weisi, Ong Yew Soon"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Lam Kwok Yan", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00321/57/?filename=kwokyan.lam_1_2_1v3.JPG", "label": "Lam Kwok Yan", "shape": "circularImage", "title": "Name: Lam Kwok Yan\nPosition: Associate Vice President (Strategy \u0026 Partnerships)\nPublications: 316\nCitations: 5696\nFrequent collaborators: Anupam Chattopadhyay, Dusit Niyato, Zhao Jun"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Lam Siew Kei", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00901/57/?filename=assklam_1_2.JPG", "label": "Lam Siew Kei", "shape": "circularImage", "title": "Name: Lam Siew Kei\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 190\nCitations: 1769\nFrequent collaborators: Anupam Chattopadhyay"}, {"borderWidth": 3, "color": "#E74C3C", "font": {"color": "black"}, "id": "Lee Bu Sung", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00531/57/?filename=Assoc Prof Lee Bu Sung.JPG", "label": "Lee Bu Sung", "shape": "circularImage", "title": "Name: Lee Bu Sung\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 529\nCitations: 14768\nFrequent collaborators: Lin Weisi, Wentong Cai, Yeo Chai Kiat"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Li Boyang", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01289/57/?filename=Assoc Prof Li Boyang.png", "label": "Li Boyang", "shape": "circularImage", "title": "Name: Li Boyang\nPosition: Nanyang Associate Professor (NRF), School of Computer Science and Engineering\nPublications: 97\nCitations: 2024\nFrequent collaborators: Miao Chun Yan, Shen Zhiqi, Yu Han"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Li Mo", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00937/57/?filename=potrait.jpg", "label": "Li Mo", "shape": "circularImage", "title": "Name: Li Mo\nPosition: Professor, School of Computer Science and Engineering\nPublications: 159\nCitations: 11549\nFrequent collaborators: Tan Rui, Zhao Jun"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Li Yi", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00572/57/?filename=liyi-white.jpg", "label": "Li Yi", "shape": "circularImage", "title": "Name: Li Yi\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 48\nCitations: 1285\nFrequent collaborators: Lin Shang-Wei, Liu Yang"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Lim Wei Yang Bryan", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp02085/57/?filename=0X7A7948 (1)_1_1_2.JPG", "label": "Lim Wei Yang Bryan", "shape": "circularImage", "title": "Name: Lim Wei Yang Bryan\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 66\nCitations: 3451\nFrequent collaborators: Dusit Niyato, Miao Chun Yan, Yu Han"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Lin Guosheng", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00483/57/?filename=gslin_1_2.JPG", "label": "Lin Guosheng", "shape": "circularImage", "title": "Name: Lin Guosheng\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 144\nCitations: 13211\nFrequent collaborators: Lin Weisi, Long Cheng, Miao Chun Yan, Pan, Sinno Jialin,\nTan Rui"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Lin Shang-Wei", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00861/57/?filename=shang-wei.lin_1_2.JPG", "label": "Lin Shang-Wei", "shape": "circularImage", "title": "Name: Lin Shang-Wei\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 83\nCitations: 1728\nFrequent collaborators: Li Yi, Lin Weisi, Liu Yang"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Lin Weisi", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00683/57/?filename=Prof Lin Weisi_2.jpg", "label": "Lin Weisi", "shape": "circularImage", "title": "Name: Lin Weisi\nPosition: Associate Chair (Research), School of Computer Science and Engineering\nPublications: 694\nCitations: 27704\nFrequent collaborators: Kwoh Chee Keong, Lee Bu Sung, Seah Hock Soon"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Liu Weichen", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00280/57/?filename=Asst Prof Liu Weichen.JPG", "label": "Liu Weichen", "shape": "circularImage", "title": "Name: Liu Weichen\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 164\nCitations: 2780\nFrequent collaborators: Mohamed M. Sabry, Ong Yew Soon, Zhang Hanwang"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Liu Yang", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00564/57/?filename=yangliu_1_2.JPG", "label": "Liu Yang", "shape": "circularImage", "title": "Name: Liu Yang\nPosition: Professor, School of Computer Science and Engineering\nPublications: 641\nCitations: 19154\nFrequent collaborators: Lin Shang-Wei, Zhang Jie, Zhang Tianwei"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Liu Ziwei", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00203/57/?filename=Asst Prof Liu Ziwei.JPG", "label": "Liu Ziwei", "shape": "circularImage", "title": "Name: Liu Ziwei\nPosition: Nanyang Assistant Professor, School of Computer Science and Engineering\nPublications: 229\nCitations: 32175\nFrequent collaborators: Chen Change Loy, Ong Yew Soon, Pan Xingang"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Loke Yuan Ren", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00585/57/?filename=Dr Loke Yuan Ren.JPG", "label": "Loke Yuan Ren", "shape": "circularImage", "title": "Name: Loke Yuan Ren\nPosition: Lecturer, School of Computer Science and Engineering\nPublications: 7\nCitations: 18\nFrequent collaborators: nan"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Long Cheng", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00772/57/?filename=ChengLONG-Photo (1).jpeg", "label": "Long Cheng", "shape": "circularImage", "title": "Name: Long Cheng\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 112\nCitations: 1874\nFrequent collaborators: Cong Gao, Sun Aixin, Zhang Jie"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Lu Shijian", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01128/57/?filename=Shijian3.jpg", "label": "Lu Shijian", "shape": "circularImage", "title": "Name: Lu Shijian\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 254\nCitations: 14651\nFrequent collaborators: Guan Cuntai, Liu Ziwei, Miao Chun Yan"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Luke Ong \uff08\u7fc1\u4e4b\u660a\uff09", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp02044/57/?filename=20220902 RITM0357051 PIC 2022 Studio Shoot-79 2.jpg", "label": "Luke Ong \uff08\u7fc1\u4e4b\u660a\uff09", "shape": "circularImage", "title": "Name: Luke Ong \uff08\u7fc1\u4e4b\u660a\uff09\nPosition: Distinguished University Professor and Vice President (Research)\nPublications: 203\nCitations: 6079\nFrequent collaborators: nan"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Luo Jun", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01107/57/?filename=junluo_1_2.JPG", "label": "Luo Jun", "shape": "circularImage", "title": "Name: Luo Jun\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 167\nCitations: 9670\nFrequent collaborators: Dusit Niyato, He Ying, Pan, Sinno Jialin"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Luo Siqiang", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01311/57/?filename=Siqiang.jpg", "label": "Luo Siqiang", "shape": "circularImage", "title": "Name: Luo Siqiang\nPosition: Nanyang Assistant Professor, School of Computer Science and Engineering\nPublications: 60\nCitations: 1386\nFrequent collaborators: Cong Gao, Long Cheng"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Luu Anh Tuan", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01296/57/?filename=Asst Prof Luu Anh Tuan.jpg", "label": "Luu Anh Tuan", "shape": "circularImage", "title": "Name: Luu Anh Tuan\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 94\nCitations: 4418\nFrequent collaborators: Erik Cambria, Hui Siu Cheung, Liu Yang, Miao Chun Yan, Yu Han,\nZhang Hanwang"}, {"borderWidth": 3, "color": "#E74C3C", "font": {"color": "black"}, "id": "Miao Chun Yan", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00084/57/?filename=ascymiao_1_2.JPG", "label": "Miao Chun Yan", "shape": "circularImage", "title": "Name: Miao Chun Yan\nPosition: Chair, School of Computer Science and Engineering\nPublications: 683\nCitations: 18279\nFrequent collaborators: Dusit Niyato, Shen Zhiqi, Yu Han"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Mohamed M. Sabry", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00314/57/?filename=image4.jpeg", "label": "Mohamed M. Sabry", "shape": "circularImage", "title": "Name: Mohamed M. Sabry\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 102\nCitations: 1524\nFrequent collaborators: Anupam Chattopadhyay, Liu Weichen"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Oh Hong Lye", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00131/57/?filename=hloh_1_2.JPG", "label": "Oh Hong Lye", "shape": "circularImage", "title": "Name: Oh Hong Lye\nPosition: Senior Lecturer, School of Computer Science and Engineering\nPublications: 15\nCitations: 228\nFrequent collaborators: Lee Bu Sung, Yeo Chai Kiat"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Ong Chin Ann", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp02123/57/?filename=8559_300300.jpg", "label": "Ong Chin Ann", "shape": "circularImage", "title": "Name: Ong Chin Ann\nPosition: Lecturer, School of Computer Science and Engineering\nPublications: 18\nCitations: 215\nFrequent collaborators: nan"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Ong Yew Soon", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00092/57/?filename=Ong Yew Soon-v2.jpg", "label": "Ong Yew Soon", "shape": "circularImage", "title": "Name: Ong Yew Soon\nPosition: Co-Director,  Singtel Cognitive and Artificial Intelligence Lab (SCALE@NTU)\nPublications: 521\nCitations: 24164\nFrequent collaborators: Kwoh Chee Keong, Lee Bu Sung, Zhang Jie"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Owen Noel Newton Fernando", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00400/57/?filename=Dr Owen Noel Newton Fernando.JPG", "label": "Owen Noel Newton Fernando", "shape": "circularImage", "title": "Name: Owen Noel Newton Fernando\nPosition: Senior Lecturer, School of Computer Science and Engineering\nPublications: 128\nCitations: 1407\nFrequent collaborators: Anupam Chattopadhyay, Jagath Chandana Rajapakse, Ong Yew Soon, Seah Hock Soon, Wee Keong NG"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Pan Xingang", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp02182/57/?filename=Xingang_400x514.jpg", "label": "Pan Xingang", "shape": "circularImage", "title": "Name: Pan Xingang\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 32\nCitations: 2534\nFrequent collaborators: Chen Change Loy, Liu Ziwei"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Pan, Sinno Jialin", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00122/57/?filename=cut.JPG", "label": "Pan, Sinno Jialin", "shape": "circularImage", "title": "Name: Pan, Sinno Jialin\nPosition: Professor, School of Computer Science and Engineering\nPublications: 126\nCitations: 38118\nFrequent collaborators: Luo Jun, Miao Chun Yan, Wang Wenya"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Qian Kemao", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00891/57/?filename=mkmqian_1_2.JPG", "label": "Qian Kemao", "shape": "circularImage", "title": "Name: Qian Kemao\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 234\nCitations: 11839\nFrequent collaborators: Alexei Sourin, Chia Liang Tien, Chng Eng Siong, Cong Gao, Lee Bu Sung,\nLiu Yang, Miao Chun Yan, Ong Yew Soon, Seah Hock Soon, Vidya Sudarshan, Wentong Cai, Yu Han"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Quek Hiok Chai", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00707/57/?filename=ashcquek_1_2.JPG", "label": "Quek Hiok Chai", "shape": "circularImage", "title": "Name: Quek Hiok Chai\nPosition: Associate Chair (Students), School of Computer Science and Engineering\nPublications: 313\nCitations: 8409\nFrequent collaborators: Deepu Rajan, Douglas Leslie Maskell, Guan Cuntai"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Seah Hock Soon", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00345/57/?filename=ashsseah_1_2.JPG", "label": "Seah Hock Soon", "shape": "circularImage", "title": "Name: Seah Hock Soon\nPosition: Professor, School of Computer Science and Engineering\nPublications: 307\nCitations: 3496\nFrequent collaborators: Lin Weisi, Qian Kemao, Zheng Jianmin"}, {"borderWidth": 3, "color": "#E74C3C", "font": {"color": "black"}, "id": "Shen Zhiqi", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00227/57/?filename=zqshen_1_2.JPG", "label": "Shen Zhiqi", "shape": "circularImage", "title": "Name: Shen Zhiqi\nPosition: Senior Lecturer, School of Computer Science and Engineering\nPublications: 320\nCitations: 6556\nFrequent collaborators: Bo An, Miao Chun Yan, Yu Han"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Siyuan Liu", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01753/57/?filename=DSC_3590_small.jpg", "label": "Siyuan Liu", "shape": "circularImage", "title": "Name: Siyuan Liu\nPosition: Lecturer, School of Computer Science and Engineering\nPublications: 49\nCitations: 835\nFrequent collaborators: Miao Chun Yan, Shen Zhiqi, Yu Han"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Smitha K G", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00612/57/?filename=IMG_0043.jpg", "label": "Smitha K G", "shape": "circularImage", "title": "Name: Smitha K G\nPosition: Senior Lecturer, School of Computer Science and Engineering\nPublications: 55\nCitations: 789\nFrequent collaborators: nan"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Sourav Saha Bhowmick", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00915/57/?filename=Assoc Prof Sourav Saha Bhowmick.JPG", "label": "Sourav Saha Bhowmick", "shape": "circularImage", "title": "Name: Sourav Saha Bhowmick\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 310\nCitations: 5941\nFrequent collaborators: Chia Liang Tien, Sun Aixin, Wee Keong NG"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Sun Aixin", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00552/57/?filename=AixinWeb514.jpg", "label": "Sun Aixin", "shape": "circularImage", "title": "Name: Sun Aixin\nPosition: Associate Chair (Academic), School of Computer Science and Engineering\nPublications: 265\nCitations: 17333\nFrequent collaborators: Anwitaman Datta, Cong Gao, Sourav Saha Bhowmick"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Tan Rui", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00504/57/?filename=Assoc Prof Tan Rui.JPG", "label": "Tan Rui", "shape": "circularImage", "title": "Name: Tan Rui\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 167\nCitations: 4324\nFrequent collaborators: Dusit Niyato, Li Mo, Wen Yonggang"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Vidya Sudarshan", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01361/57/?filename=Vidya photo.jpg", "label": "Vidya Sudarshan", "shape": "circularImage", "title": "Name: Vidya Sudarshan\nPosition: Lecturer, School of Computer Science and Engineering\nPublications: 61\nCitations: 3374\nFrequent collaborators: Alexei Sourin, Chia Liang Tien, Chng Eng Siong, Cong Gao, Lee Bu Sung,\nLiu Yang, Miao Chun Yan, Ong Yew Soon, Qian Kemao, Wentong Cai, Yu Han"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Wai Kin Adams Kong", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00834/57/?filename=adamskong_1_2.JPG", "label": "Wai Kin Adams Kong", "shape": "circularImage", "title": "Name: Wai Kin Adams Kong\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 146\nCitations: 7612\nFrequent collaborators: Lam Kwok Yan, Tan Rui, Yeo Chai Kiat"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Wang Wenya", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01685/57/?filename=profile_prof.jpeg", "label": "Wang Wenya", "shape": "circularImage", "title": "Name: Wang Wenya\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 23\nCitations: 1141\nFrequent collaborators: Pan, Sinno Jialin"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Wee Keong NG", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01094/57/?filename=awkng_1_2.JPG", "label": "Wee Keong NG", "shape": "circularImage", "title": "Name: Wee Keong NG\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 382\nCitations: 6903\nFrequent collaborators: Lam Kwok Yan, Sourav Saha Bhowmick, Sun Aixin, Zhang Jie"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Wei Ying", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp02297/57/?filename=Ying_WEI_self_portrait_small_SCSE_1.JPG", "label": "Wei Ying", "shape": "circularImage", "title": "Name: Wei Ying\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 50\nCitations: 2886\nFrequent collaborators: nan"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Wen Yonggang", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01090/57/?filename=WechatIMG154.png", "label": "Wen Yonggang", "shape": "circularImage", "title": "Name: Wen Yonggang\nPosition: Associate Vice President (Capability Building)\nPublications: 351\nCitations: 18258\nFrequent collaborators: Dusit Niyato, Tan Rui, Zhang Tianwei"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Wentong Cai", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00964/57/?filename=Prof Wentong Cai.JPG", "label": "Wentong Cai", "shape": "circularImage", "title": "Name: Wentong Cai\nPosition: Associate Chair (Faculty),  School of Computer Science and Engineering\nPublications: 505\nCitations: 7515\nFrequent collaborators: Huang Shell Ying, Lee Bu Sung, Ong Yew Soon"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Yeo Chai Kiat", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00963/57/?filename=Assoc Prof Yeo Chai Kiat.JPG", "label": "Yeo Chai Kiat", "shape": "circularImage", "title": "Name: Yeo Chai Kiat\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 317\nCitations: 4310\nFrequent collaborators: Chia Liang Tien, Hui Siu Cheung, Lee Bu Sung"}, {"borderWidth": 3, "color": "#E74C3C", "font": {"color": "black"}, "id": "Yu Han", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00334/57/?filename=Han Yu.jpg", "label": "Yu Han", "shape": "circularImage", "title": "Name: Yu Han\nPosition: Nanyang Assistant Professor, School of Computer Science and Engineering\nPublications: 314\nCitations: 12483\nFrequent collaborators: Dusit Niyato, Miao Chun Yan, Shen Zhiqi"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Zhang Hanwang", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp01149/57/?filename=Asst Prof Zhang Hanwang.JPG", "label": "Zhang Hanwang", "shape": "circularImage", "title": "Name: Zhang Hanwang\nPosition: Associate Professor, School of Computer Science and Engineering\nPublications: 170\nCitations: 22935\nFrequent collaborators: Li Boyang, Liu Weichen, Luu Anh Tuan, Miao Chun Yan"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Zhang Jie", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00759/57/?filename=3-1.jpg", "label": "Zhang Jie", "shape": "circularImage", "title": "Name: Zhang Jie\nPosition: Professor, School of Computer Science and Engineering\nPublications: 328\nCitations: 12442\nFrequent collaborators: Liu Yang, Long Cheng, Miao Chun Yan, Ong Yew Soon"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Zhang Tianwei", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00562/57/?filename=Asst Prof Zhang Tianwei.JPG", "label": "Zhang Tianwei", "shape": "circularImage", "title": "Name: Zhang Tianwei\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 185\nCitations: 2870\nFrequent collaborators: Liu Yang, Wen Yonggang, Yu Han"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Zhao Jun", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00501/57/?filename=junzhao.png", "label": "Zhao Jun", "shape": "circularImage", "title": "Name: Zhao Jun\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 272\nCitations: 7580\nFrequent collaborators: Dusit Niyato, Lam Kwok Yan, Yu Han"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Zheng Jianmin", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00072/57/?filename=asjmzheng_1_2.JPG", "label": "Zheng Jianmin", "shape": "circularImage", "title": "Name: Zheng Jianmin\nPosition: Professor, School of Computer Science and Engineering\nPublications: 231\nCitations: 7288\nFrequent collaborators: Cham Tat Jen, He Ying, Lin Weisi, Seah Hock Soon"}, {"borderWidth": 3, "color": "#97c2fc", "font": {"color": "black"}, "id": "Zinovi Rabinovich", "image": "https://dr.ntu.edu.sg//cris/rp/fileservice/rp00214/57/?filename=Asst Prof Zinovi Rabinovich.JPG", "label": "Zinovi Rabinovich", "shape": "circularImage", "title": "Name: Zinovi Rabinovich\nPosition: Assistant Professor, School of Computer Science and Engineering\nPublications: 81\nCitations: 1134\nFrequent collaborators: Bo An, Quek Hiok Chai, Yeo Chai Kiat"}]);
+                  edges = new vis.DataSet([{"color": "#FF4E50", "from": "A S Madhukumar", "title": "2", "to": "Dusit Niyato"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "1", "to": "Chia Liang Tien"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "1", "to": "Chng Eng Siong"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "1", "to": "Cong Gao"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "2", "to": "Lee Bu Sung"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "1", "to": "Liu Yang"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "1", "to": "Miao Chun Yan"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "1", "to": "Ong Yew Soon"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "1", "to": "Qian Kemao"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "4", "to": "Seah Hock Soon"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "1", "to": "Vidya Sudarshan"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "1", "to": "Wee Keong NG"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "1", "to": "Wentong Cai"}, {"color": "#FF4E50", "from": "Alexei Sourin", "title": "1", "to": "Yu Han"}, {"color": "#FF4E50", "from": "Anupam Chattopadhyay", "title": "4", "to": "Arvind Easwaran"}, {"color": "#45ADA8", "from": "Anupam Chattopadhyay", "title": "1", "to": "Dusit Niyato"}, {"color": "#45ADA8", "from": "Anupam Chattopadhyay", "title": "1", "to": "Erik Cambria"}, {"color": "#45ADA8", "from": "Anupam Chattopadhyay", "title": "1", "to": "Guan Cuntai"}, {"color": "#FF4E50", "from": "Anupam Chattopadhyay", "title": "11", "to": "Lam Kwok Yan"}, {"color": "#45ADA8", "from": "Anupam Chattopadhyay", "title": "1", "to": "Lam Siew Kei"}, {"color": "#FF4E50", "from": "Anupam Chattopadhyay", "title": "4", "to": "Mohamed M. Sabry"}, {"color": "#FF4E50", "from": "Anupam Chattopadhyay", "title": "4", "to": "Owen Noel Newton Fernando"}, {"color": "#45ADA8", "from": "Anupam Chattopadhyay", "title": "3", "to": "Seah Hock Soon"}, {"color": "#45ADA8", "from": "Anupam Chattopadhyay", "title": "1", "to": "Wentong Cai"}, {"color": "#FF4E50", "from": "Anwitaman Datta", "title": "1", "to": "Lee Bu Sung"}, {"color": "#FF4E50", "from": "Anwitaman Datta", "title": "13", "to": "Sun Aixin"}, {"color": "#FF4E50", "from": "Anwitaman Datta", "title": "2", "to": "Wee Keong NG"}, {"color": "#FF4E50", "from": "Anwitaman Datta", "title": "1", "to": "Zhang Jie"}, {"color": "#FF4E50", "from": "Arvind Easwaran", "title": "4", "to": "Tan Rui"}, {"color": "#45ADA8", "from": "Bo An", "title": "1", "to": "Cong Gao"}, {"color": "#45ADA8", "from": "Bo An", "title": "1", "to": "Dusit Niyato"}, {"color": "#FF4E50", "from": "Bo An", "title": "25", "to": "Miao Chun Yan"}, {"color": "#45ADA8", "from": "Bo An", "title": "1", "to": "Pan, Sinno Jialin"}, {"color": "#FF4E50", "from": "Bo An", "title": "12", "to": "Shen Zhiqi"}, {"color": "#45ADA8", "from": "Bo An", "title": "3", "to": "Yeo Chai Kiat"}, {"color": "#45ADA8", "from": "Bo An", "title": "6", "to": "Yu Han"}, {"color": "#45ADA8", "from": "Bo An", "title": "3", "to": "Zhang Jie"}, {"color": "#FF4E50", "from": "Bo An", "title": "8", "to": "Zinovi Rabinovich"}, {"color": "#FF4E50", "from": "Cham Tat Jen", "title": "3", "to": "Chia Liang Tien"}, {"color": "#FF4E50", "from": "Cham Tat Jen", "title": "2", "to": "Deepu Rajan"}, {"color": "#45ADA8", "from": "Cham Tat Jen", "title": "1", "to": "Yeo Chai Kiat"}, {"color": "#FF4E50", "from": "Cham Tat Jen", "title": "12", "to": "Zheng Jianmin"}, {"color": "#FF4E50", "from": "Chen Change Loy", "title": "62", "to": "Liu Ziwei"}, {"color": "#FF4E50", "from": "Chen Change Loy", "title": "5", "to": "Ong Yew Soon"}, {"color": "#FF4E50", "from": "Chen Change Loy", "title": "6", "to": "Pan Xingang"}, {"color": "#45ADA8", "from": "Chen Change Loy", "title": "4", "to": "Yeo Chai Kiat"}, {"color": "#45ADA8", "from": "Chia Liang Tien", "title": "1", "to": "Chng Eng Siong"}, {"color": "#45ADA8", "from": "Chia Liang Tien", "title": "1", "to": "Cong Gao"}, {"color": "#FF4E50", "from": "Chia Liang Tien", "title": "48", "to": "Deepu Rajan"}, {"color": "#FF4E50", "from": "Chia Liang Tien", "title": "21", "to": "Lee Bu Sung"}, {"color": "#45ADA8", "from": "Chia Liang Tien", "title": "2", "to": "Lin Weisi"}, {"color": "#45ADA8", "from": "Chia Liang Tien", "title": "1", "to": "Liu Yang"}, {"color": "#45ADA8", "from": "Chia Liang Tien", "title": "1", "to": "Miao Chun Yan"}, {"color": "#45ADA8", "from": "Chia Liang Tien", "title": "1", "to": "Ong Yew Soon"}, {"color": "#45ADA8", "from": "Chia Liang Tien", "title": "1", "to": "Qian Kemao"}, {"color": "#FF4E50", "from": "Chia Liang Tien", "title": "8", "to": "Sourav Saha Bhowmick"}, {"color": "#45ADA8", "from": "Chia Liang Tien", "title": "1", "to": "Vidya Sudarshan"}, {"color": "#45ADA8", "from": "Chia Liang Tien", "title": "1", "to": "Wentong Cai"}, {"color": "#45ADA8", "from": "Chia Liang Tien", "title": "5", "to": "Yeo Chai Kiat"}, {"color": "#45ADA8", "from": "Chia Liang Tien", "title": "1", "to": "Yu Han"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "1", "to": "Cong Gao"}, {"color": "#FF4E50", "from": "Chng Eng Siong", "title": "6", "to": "Deepu Rajan"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "1", "to": "Erik Cambria"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "1", "to": "Goh Wooi Boon"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "1", "to": "Guan Cuntai"}, {"color": "#FF4E50", "from": "Chng Eng Siong", "title": "5", "to": "Joty Shafiq Rayhan"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "2", "to": "Lee Bu Sung"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "1", "to": "Liu Yang"}, {"color": "#FF4E50", "from": "Chng Eng Siong", "title": "3", "to": "Miao Chun Yan"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "1", "to": "Ong Yew Soon"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "1", "to": "Qian Kemao"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "2", "to": "Shen Zhiqi"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "1", "to": "Siyuan Liu"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "2", "to": "Sun Aixin"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "1", "to": "Vidya Sudarshan"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "1", "to": "Wentong Cai"}, {"color": "#45ADA8", "from": "Chng Eng Siong", "title": "1", "to": "Yu Han"}, {"color": "#45ADA8", "from": "Cong Gao", "title": "1", "to": "Hui Siu Cheung"}, {"color": "#45ADA8", "from": "Cong Gao", "title": "1", "to": "Joty Shafiq Rayhan"}, {"color": "#45ADA8", "from": "Cong Gao", "title": "1", "to": "Lee Bu Sung"}, {"color": "#45ADA8", "from": "Cong Gao", "title": "1", "to": "Liu Yang"}, {"color": "#FF4E50", "from": "Cong Gao", "title": "12", "to": "Long Cheng"}, {"color": "#45ADA8", "from": "Cong Gao", "title": "3", "to": "Luo Siqiang"}, {"color": "#FF4E50", "from": "Cong Gao", "title": "8", "to": "Miao Chun Yan"}, {"color": "#45ADA8", "from": "Cong Gao", "title": "1", "to": "Ong Yew Soon"}, {"color": "#45ADA8", "from": "Cong Gao", "title": "1", "to": "Qian Kemao"}, {"color": "#45ADA8", "from": "Cong Gao", "title": "1", "to": "Seah Hock Soon"}, {"color": "#45ADA8", "from": "Cong Gao", "title": "5", "to": "Sourav Saha Bhowmick"}, {"color": "#FF4E50", "from": "Cong Gao", "title": "14", "to": "Sun Aixin"}, {"color": "#45ADA8", "from": "Cong Gao", "title": "1", "to": "Vidya Sudarshan"}, {"color": "#45ADA8", "from": "Cong Gao", "title": "1", "to": "Wentong Cai"}, {"color": "#45ADA8", "from": "Cong Gao", "title": "1", "to": "Yu Han"}, {"color": "#45ADA8", "from": "Deepu Rajan", "title": "1", "to": "Dusit Niyato"}, {"color": "#45ADA8", "from": "Deepu Rajan", "title": "4", "to": "Lee Bu Sung"}, {"color": "#FF4E50", "from": "Deepu Rajan", "title": "11", "to": "Quek Hiok Chai"}, {"color": "#45ADA8", "from": "Deepu Rajan", "title": "1", "to": "Wentong Cai"}, {"color": "#45ADA8", "from": "Deepu Rajan", "title": "1", "to": "Yeo Chai Kiat"}, {"color": "#FF4E50", "from": "Douglas Leslie Maskell", "title": "2", "to": "Goh Wooi Boon"}, {"color": "#FF4E50", "from": "Douglas Leslie Maskell", "title": "7", "to": "Quek Hiok Chai"}, {"color": "#45ADA8", "from": "Dusit Niyato", "title": "15", "to": "Lam Kwok Yan"}, {"color": "#45ADA8", "from": "Dusit Niyato", "title": "11", "to": "Lee Bu Sung"}, {"color": "#FF4E50", "from": "Dusit Niyato", "title": "57", "to": "Lim Wei Yang Bryan"}, {"color": "#45ADA8", "from": "Dusit Niyato", "title": "4", "to": "Luo Jun"}, {"color": "#FF4E50", "from": "Dusit Niyato", "title": "66", "to": "Miao Chun Yan"}, {"color": "#45ADA8", "from": "Dusit Niyato", "title": "2", "to": "Shen Zhiqi"}, {"color": "#45ADA8", "from": "Dusit Niyato", "title": "5", "to": "Tan Rui"}, {"color": "#45ADA8", "from": "Dusit Niyato", "title": "7", "to": "Wen Yonggang"}, {"color": "#45ADA8", "from": "Dusit Niyato", "title": "31", "to": "Yu Han"}, {"color": "#45ADA8", "from": "Dusit Niyato", "title": "7", "to": "Zhang Jie"}, {"color": "#FF4E50", "from": "Dusit Niyato", "title": "33", "to": "Zhao Jun"}, {"color": "#FF4E50", "from": "Erik Cambria", "title": "2", "to": "Jagath Chandana Rajapakse"}, {"color": "#45ADA8", "from": "Erik Cambria", "title": "1", "to": "Luu Anh Tuan"}, {"color": "#FF4E50", "from": "Erik Cambria", "title": "3", "to": "Miao Chun Yan"}, {"color": "#FF4E50", "from": "Erik Cambria", "title": "2", "to": "Ong Yew Soon"}, {"color": "#45ADA8", "from": "Erik Cambria", "title": "1", "to": "Sun Aixin"}, {"color": "#45ADA8", "from": "Erik Cambria", "title": "1", "to": "Wee Keong NG"}, {"color": "#FF4E50", "from": "Goh Wooi Boon", "title": "4", "to": "Guan Cuntai"}, {"color": "#FF4E50", "from": "Goh Wooi Boon", "title": "1", "to": "Hui Siu Cheung"}, {"color": "#FF4E50", "from": "Goh Wooi Boon", "title": "1", "to": "Seah Hock Soon"}, {"color": "#FF4E50", "from": "Guan Cuntai", "title": "5", "to": "Kwoh Chee Keong"}, {"color": "#45ADA8", "from": "Guan Cuntai", "title": "1", "to": "Liu Yang"}, {"color": "#FF4E50", "from": "Guan Cuntai", "title": "5", "to": "Lu Shijian"}, {"color": "#45ADA8", "from": "Guan Cuntai", "title": "1", "to": "Pan, Sinno Jialin"}, {"color": "#FF4E50", "from": "Guan Cuntai", "title": "16", "to": "Quek Hiok Chai"}, {"color": "#45ADA8", "from": "Guan Cuntai", "title": "1", "to": "Yu Han"}, {"color": "#45ADA8", "from": "He Ying", "title": "1", "to": "Lin Weisi"}, {"color": "#FF4E50", "from": "He Ying", "title": "14", "to": "Luo Jun"}, {"color": "#FF4E50", "from": "He Ying", "title": "3", "to": "Miao Chun Yan"}, {"color": "#FF4E50", "from": "He Ying", "title": "5", "to": "Seah Hock Soon"}, {"color": "#45ADA8", "from": "He Ying", "title": "2", "to": "Zheng Jianmin"}, {"color": "#45ADA8", "from": "Huang Shell Ying", "title": "1", "to": "Lee Bu Sung"}, {"color": "#FF4E50", "from": "Huang Shell Ying", "title": "3", "to": "Miao Chun Yan"}, {"color": "#FF4E50", "from": "Huang Shell Ying", "title": "3", "to": "Quek Hiok Chai"}, {"color": "#45ADA8", "from": "Huang Shell Ying", "title": "2", "to": "Shen Zhiqi"}, {"color": "#FF4E50", "from": "Huang Shell Ying", "title": "10", "to": "Wentong Cai"}, {"color": "#45ADA8", "from": "Hui Siu Cheung", "title": "1", "to": "Jagath Chandana Rajapakse"}, {"color": "#FF4E50", "from": "Hui Siu Cheung", "title": "2", "to": "Lee Bu Sung"}, {"color": "#FF4E50", "from": "Hui Siu Cheung", "title": "32", "to": "Luu Anh Tuan"}, {"color": "#FF4E50", "from": "Hui Siu Cheung", "title": "22", "to": "Yeo Chai Kiat"}, {"color": "#45ADA8", "from": "Hui Siu Cheung", "title": "1", "to": "Zhao Jun"}, {"color": "#FF4E50", "from": "Jagath Chandana Rajapakse", "title": "1", "to": "Owen Noel Newton Fernando"}, {"color": "#45ADA8", "from": "Joty Shafiq Rayhan", "title": "1", "to": "Li Boyang"}, {"color": "#FF4E50", "from": "Joty Shafiq Rayhan", "title": "3", "to": "Miao Chun Yan"}, {"color": "#FF4E50", "from": "Joty Shafiq Rayhan", "title": "3", "to": "Sourav Saha Bhowmick"}, {"color": "#45ADA8", "from": "Joty Shafiq Rayhan", "title": "2", "to": "Sun Aixin"}, {"color": "#FF4E50", "from": "Ke Yiping, Kelly", "title": "6", "to": "Ong Yew Soon"}, {"color": "#FF4E50", "from": "Ke Yiping, Kelly", "title": "1", "to": "Pan, Sinno Jialin"}, {"color": "#FF4E50", "from": "Kwoh Chee Keong", "title": "7", "to": "Lin Weisi"}, {"color": "#45ADA8", "from": "Kwoh Chee Keong", "title": "1", "to": "Miao Chun Yan"}, {"color": "#FF4E50", "from": "Kwoh Chee Keong", "title": "13", "to": "Ong Yew Soon"}, {"color": "#45ADA8", "from": "Lam Kwok Yan", "title": "1", "to": "Sun Aixin"}, {"color": "#45ADA8", "from": "Lam Kwok Yan", "title": "4", "to": "Wai Kin Adams Kong"}, {"color": "#45ADA8", "from": "Lam Kwok Yan", "title": "3", "to": "Wee Keong NG"}, {"color": "#45ADA8", "from": "Lam Kwok Yan", "title": "1", "to": "Yu Han"}, {"color": "#FF4E50", "from": "Lam Kwok Yan", "title": "37", "to": "Zhao Jun"}, {"color": "#FF4E50", "from": "Lee Bu Sung", "title": "22", "to": "Lin Weisi"}, {"color": "#45ADA8", "from": "Lee Bu Sung", "title": "1", "to": "Liu Yang"}, {"color": "#45ADA8", "from": "Lee Bu Sung", "title": "6", "to": "Miao Chun Yan"}, {"color": "#45ADA8", "from": "Lee Bu Sung", "title": "7", "to": "Oh Hong Lye"}, {"color": "#45ADA8", "from": "Lee Bu Sung", "title": "14", "to": "Ong Yew Soon"}, {"color": "#45ADA8", "from": "Lee Bu Sung", "title": "1", "to": "Qian Kemao"}, {"color": "#45ADA8", "from": "Lee Bu Sung", "title": "1", "to": "Shen Zhiqi"}, {"color": "#45ADA8", "from": "Lee Bu Sung", "title": "1", "to": "Sun Aixin"}, {"color": "#45ADA8", "from": "Lee Bu Sung", "title": "1", "to": "Vidya Sudarshan"}, {"color": "#FF4E50", "from": "Lee Bu Sung", "title": "41", "to": "Wentong Cai"}, {"color": "#FF4E50", "from": "Lee Bu Sung", "title": "126", "to": "Yeo Chai Kiat"}, {"color": "#45ADA8", "from": "Lee Bu Sung", "title": "1", "to": "Yu Han"}, {"color": "#45ADA8", "from": "Lee Bu Sung", "title": "2", "to": "Zhang Jie"}, {"color": "#45ADA8", "from": "Li Boyang", "title": "1", "to": "Lin Guosheng"}, {"color": "#FF4E50", "from": "Li Boyang", "title": "19", "to": "Miao Chun Yan"}, {"color": "#45ADA8", "from": "Li Boyang", "title": "1", "to": "Ong Yew Soon"}, {"color": "#FF4E50", "from": "Li Boyang", "title": "8", "to": "Shen Zhiqi"}, {"color": "#FF4E50", "from": "Li Boyang", "title": "10", "to": "Yu Han"}, {"color": "#45ADA8", "from": "Li Boyang", "title": "1", "to": "Zhang Hanwang"}, {"color": "#FF4E50", "from": "Li Mo", "title": "6", "to": "Tan Rui"}, {"color": "#FF4E50", "from": "Li Mo", "title": "1", "to": "Zhao Jun"}, {"color": "#FF4E50", "from": "Li Yi", "title": "9", "to": "Lin Shang-Wei"}, {"color": "#FF4E50", "from": "Li Yi", "title": "14", "to": "Liu Yang"}, {"color": "#FF4E50", "from": "Lim Wei Yang Bryan", "title": "40", "to": "Miao Chun Yan"}, {"color": "#FF4E50", "from": "Lim Wei Yang Bryan", "title": "8", "to": "Yu Han"}, {"color": "#FF4E50", "from": "Lin Guosheng", "title": "6", "to": "Lin Weisi"}, {"color": "#FF4E50", "from": "Lin Guosheng", "title": "2", "to": "Long Cheng"}, {"color": "#FF4E50", "from": "Lin Guosheng", "title": "8", "to": "Miao Chun Yan"}, {"color": "#FF4E50", "from": "Lin Guosheng", "title": "2", "to": "Pan, Sinno Jialin"}, {"color": "#45ADA8", "from": "Lin Guosheng", "title": "1", "to": "Shen Zhiqi"}, {"color": "#FF4E50", "from": "Lin Guosheng", "title": "2", "to": "Tan Rui"}, {"color": "#FF4E50", "from": "Lin Shang-Wei", "title": "3", "to": "Lin Weisi"}, {"color": "#FF4E50", "from": "Lin Shang-Wei", "title": "34", "to": "Liu Yang"}, {"color": "#45ADA8", "from": "Lin Weisi", "title": "2", "to": "Liu Yang"}, {"color": "#45ADA8", "from": "Lin Weisi", "title": "1", "to": "Luo Jun"}, {"color": "#FF4E50", "from": "Lin Weisi", "title": "9", "to": "Seah Hock Soon"}, {"color": "#45ADA8", "from": "Lin Weisi", "title": "2", "to": "Wee Keong NG"}, {"color": "#45ADA8", "from": "Lin Weisi", "title": "2", "to": "Zheng Jianmin"}, {"color": "#FF4E50", "from": "Liu Weichen", "title": "1", "to": "Mohamed M. Sabry"}, {"color": "#FF4E50", "from": "Liu Weichen", "title": "1", "to": "Ong Yew Soon"}, {"color": "#FF4E50", "from": "Liu Weichen", "title": "1", "to": "Zhang Hanwang"}, {"color": "#45ADA8", "from": "Liu Yang", "title": "4", "to": "Luu Anh Tuan"}, {"color": "#45ADA8", "from": "Liu Yang", "title": "2", "to": "Miao Chun Yan"}, {"color": "#45ADA8", "from": "Liu Yang", "title": "3", "to": "Ong Yew Soon"}, {"color": "#45ADA8", "from": "Liu Yang", "title": "1", "to": "Qian Kemao"}, {"color": "#45ADA8", "from": "Liu Yang", "title": "1", "to": "Tan Rui"}, {"color": "#45ADA8", "from": "Liu Yang", "title": "1", "to": "Vidya Sudarshan"}, {"color": "#45ADA8", "from": "Liu Yang", "title": "2", "to": "Wen Yonggang"}, {"color": "#45ADA8", "from": "Liu Yang", "title": "3", "to": "Wentong Cai"}, {"color": "#45ADA8", "from": "Liu Yang", "title": "3", "to": "Yu Han"}, {"color": "#FF4E50", "from": "Liu Yang", "title": "19", "to": "Zhang Jie"}, {"color": "#FF4E50", "from": "Liu Yang", "title": "29", "to": "Zhang Tianwei"}, {"color": "#45ADA8", "from": "Liu Ziwei", "title": "2", "to": "Lu Shijian"}, {"color": "#FF4E50", "from": "Liu Ziwei", "title": "5", "to": "Ong Yew Soon"}, {"color": "#FF4E50", "from": "Liu Ziwei", "title": "7", "to": "Pan Xingang"}, {"color": "#45ADA8", "from": "Liu Ziwei", "title": "1", "to": "Yeo Chai Kiat"}, {"color": "#45ADA8", "from": "Liu Ziwei", "title": "1", "to": "Zhang Tianwei"}, {"color": "#45ADA8", "from": "Long Cheng", "title": "1", "to": "Luo Siqiang"}, {"color": "#45ADA8", "from": "Long Cheng", "title": "3", "to": "Miao Chun Yan"}, {"color": "#45ADA8", "from": "Long Cheng", "title": "1", "to": "Pan, Sinno Jialin"}, {"color": "#FF4E50", "from": "Long Cheng", "title": "4", "to": "Sun Aixin"}, {"color": "#FF4E50", "from": "Long Cheng", "title": "8", "to": "Zhang Jie"}, {"color": "#FF4E50", "from": "Lu Shijian", "title": "5", "to": "Miao Chun Yan"}, {"color": "#45ADA8", "from": "Lu Shijian", "title": "1", "to": "Zheng Jianmin"}, {"color": "#FF4E50", "from": "Luo Jun", "title": "4", "to": "Pan, Sinno Jialin"}, {"color": "#45ADA8", "from": "Luo Jun", "title": "1", "to": "Sun Aixin"}, {"color": "#45ADA8", "from": "Luo Jun", "title": "1", "to": "Wen Yonggang"}, {"color": "#FF4E50", "from": "Luu Anh Tuan", "title": "1", "to": "Miao Chun Yan"}, {"color": "#FF4E50", "from": "Luu Anh Tuan", "title": "1", "to": "Yu Han"}, {"color": "#FF4E50", "from": "Luu Anh Tuan", "title": "1", "to": "Zhang Hanwang"}, {"color": "#45ADA8", "from": "Miao Chun Yan", "title": "5", "to": "Ong Yew Soon"}, {"color": "#45ADA8", "from": "Miao Chun Yan", "title": "5", "to": "Pan, Sinno Jialin"}, {"color": "#45ADA8", "from": "Miao Chun Yan", "title": "1", "to": "Qian Kemao"}, {"color": "#45ADA8", "from": "Miao Chun Yan", "title": "2", "to": "Quek Hiok Chai"}, {"color": "#FF4E50", "from": "Miao Chun Yan", "title": "186", "to": "Shen Zhiqi"}, {"color": "#45ADA8", "from": "Miao Chun Yan", "title": "28", "to": "Siyuan Liu"}, {"color": "#45ADA8", "from": "Miao Chun Yan", "title": "1", "to": "Sourav Saha Bhowmick"}, {"color": "#45ADA8", "from": "Miao Chun Yan", "title": "4", "to": "Sun Aixin"}, {"color": "#45ADA8", "from": "Miao Chun Yan", "title": "1", "to": "Vidya Sudarshan"}, {"color": "#45ADA8", "from": "Miao Chun Yan", "title": "3", "to": "Wen Yonggang"}, {"color": "#45ADA8", "from": "Miao Chun Yan", "title": "1", "to": "Wentong Cai"}, {"color": "#FF4E50", "from": "Miao Chun Yan", "title": "104", "to": "Yu Han"}, {"color": "#45ADA8", "from": "Miao Chun Yan", "title": "4", "to": "Zhang Hanwang"}, {"color": "#45ADA8", "from": "Miao Chun Yan", "title": "8", "to": "Zhang Jie"}, {"color": "#FF4E50", "from": "Oh Hong Lye", "title": "1", "to": "Yeo Chai Kiat"}, {"color": "#45ADA8", "from": "Ong Yew Soon", "title": "1", "to": "Owen Noel Newton Fernando"}, {"color": "#45ADA8", "from": "Ong Yew Soon", "title": "1", "to": "Qian Kemao"}, {"color": "#45ADA8", "from": "Ong Yew Soon", "title": "1", "to": "Vidya Sudarshan"}, {"color": "#45ADA8", "from": "Ong Yew Soon", "title": "5", "to": "Wen Yonggang"}, {"color": "#45ADA8", "from": "Ong Yew Soon", "title": "9", "to": "Wentong Cai"}, {"color": "#45ADA8", "from": "Ong Yew Soon", "title": "1", "to": "Yu Han"}, {"color": "#FF4E50", "from": "Ong Yew Soon", "title": "12", "to": "Zhang Jie"}, {"color": "#45ADA8", "from": "Ong Yew Soon", "title": "1", "to": "Zheng Jianmin"}, {"color": "#FF4E50", "from": "Owen Noel Newton Fernando", "title": "3", "to": "Seah Hock Soon"}, {"color": "#FF4E50", "from": "Owen Noel Newton Fernando", "title": "1", "to": "Wee Keong NG"}, {"color": "#45ADA8", "from": "Pan, Sinno Jialin", "title": "1", "to": "Sun Aixin"}, {"color": "#FF4E50", "from": "Pan, Sinno Jialin", "title": "14", "to": "Wang Wenya"}, {"color": "#45ADA8", "from": "Pan, Sinno Jialin", "title": "1", "to": "Zhang Jie"}, {"color": "#45ADA8", "from": "Pan, Sinno Jialin", "title": "1", "to": "Zhang Tianwei"}, {"color": "#FF4E50", "from": "Qian Kemao", "title": "58", "to": "Seah Hock Soon"}, {"color": "#FF4E50", "from": "Qian Kemao", "title": "1", "to": "Vidya Sudarshan"}, {"color": "#FF4E50", "from": "Qian Kemao", "title": "1", "to": "Wentong Cai"}, {"color": "#FF4E50", "from": "Qian Kemao", "title": "1", "to": "Yu Han"}, {"color": "#45ADA8", "from": "Quek Hiok Chai", "title": "1", "to": "Zinovi Rabinovich"}, {"color": "#45ADA8", "from": "Seah Hock Soon", "title": "2", "to": "Wentong Cai"}, {"color": "#FF4E50", "from": "Seah Hock Soon", "title": "7", "to": "Zheng Jianmin"}, {"color": "#45ADA8", "from": "Shen Zhiqi", "title": "11", "to": "Siyuan Liu"}, {"color": "#FF4E50", "from": "Shen Zhiqi", "title": "67", "to": "Yu Han"}, {"color": "#FF4E50", "from": "Siyuan Liu", "title": "7", "to": "Yu Han"}, {"color": "#45ADA8", "from": "Siyuan Liu", "title": "5", "to": "Zhang Jie"}, {"color": "#FF4E50", "from": "Sourav Saha Bhowmick", "title": "21", "to": "Sun Aixin"}, {"color": "#FF4E50", "from": "Sourav Saha Bhowmick", "title": "34", "to": "Wee Keong NG"}, {"color": "#45ADA8", "from": "Sourav Saha Bhowmick", "title": "1", "to": "Zhao Jun"}, {"color": "#45ADA8", "from": "Sun Aixin", "title": "8", "to": "Wee Keong NG"}, {"color": "#45ADA8", "from": "Sun Aixin", "title": "1", "to": "Yu Han"}, {"color": "#45ADA8", "from": "Sun Aixin", "title": "4", "to": "Zhang Jie"}, {"color": "#45ADA8", "from": "Tan Rui", "title": "1", "to": "Wai Kin Adams Kong"}, {"color": "#FF4E50", "from": "Tan Rui", "title": "10", "to": "Wen Yonggang"}, {"color": "#45ADA8", "from": "Tan Rui", "title": "3", "to": "Zhao Jun"}, {"color": "#FF4E50", "from": "Vidya Sudarshan", "title": "1", "to": "Wentong Cai"}, {"color": "#FF4E50", "from": "Vidya Sudarshan", "title": "1", "to": "Yu Han"}, {"color": "#FF4E50", "from": "Wai Kin Adams Kong", "title": "1", "to": "Yeo Chai Kiat"}, {"color": "#45ADA8", "from": "Wee Keong NG", "title": "2", "to": "Wen Yonggang"}, {"color": "#FF4E50", "from": "Wee Keong NG", "title": "3", "to": "Zhang Jie"}, {"color": "#45ADA8", "from": "Wen Yonggang", "title": "1", "to": "Yu Han"}, {"color": "#FF4E50", "from": "Wen Yonggang", "title": "10", "to": "Zhang Tianwei"}, {"color": "#45ADA8", "from": "Wentong Cai", "title": "1", "to": "Yu Han"}, {"color": "#45ADA8", "from": "Yeo Chai Kiat", "title": "1", "to": "Zinovi Rabinovich"}, {"color": "#45ADA8", "from": "Yu Han", "title": "4", "to": "Zhang Jie"}, {"color": "#45ADA8", "from": "Yu Han", "title": "2", "to": "Zhang Tianwei"}, {"color": "#45ADA8", "from": "Yu Han", "title": "4", "to": "Zhao Jun"}, {"color": "#45ADA8", "from": "Zhang Tianwei", "title": "1", "to": "Zhao Jun"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": false
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "repulsion": {
+            "centralGravity": 0.2,
+            "damping": 0.09,
+            "nodeDistance": 100,
+            "springConstant": 0.05,
+            "springLength": 400
+        },
+        "solver": "repulsion",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
